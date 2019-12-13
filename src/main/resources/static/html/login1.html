@@ -1,0 +1,132 @@
+<!DOCTYPE html>  
+<html>  
+<head>  
+<meta charset="UTF-8">  
+<title>Insert title here</title>  
+<link rel="stylesheet" href="https://unpkg.com/element-ui/lib/theme-chalk/index.css">  
+<script type="text/javascript" src="https://cdn.bootcss.com/vue/2.4.2/vue.min.js"></script>  
+<script type="text/javascript" src="https://unpkg.com/element-ui/lib/index.js"></script>  
+<script type="text/javascript" src="./js/jquery.js"></script>
+<script type="text/javascript" src="./js/jsencrypt.js"></script>
+<script type="text/javascript" src="./js/country.js"></script>
+<style>  
+.el-row {  
+    margin-bottom: 20px;
+}
+.login-box {
+    margin-top:20%;
+    margin-left:40%;
+}
+body{
+    height: 100%;
+    background-image:url(./images/background.png);
+    background-repeat:no-repeat;
+    background-attachment:fixed;
+    background-position:top left;
+}
+
+</style>  
+</head>  
+<body>  
+<div id="app" >
+    <div>
+        <div style="position:center;width:100%;height:70px;margin: 10% 0 ;" >
+            <h1 style="font-family:verdana;text-align:center;font-size: 70px;">meari</h1>
+        </div>
+        <div style="position:center;margin-left:30%;margin-right:30%;">
+            <el-input id="name"  v-model="name" placeholder="username" style="margin-bottom: 30px" >
+                <template slot="prepend">username</template>
+            </el-input>
+
+            <el-input id="password" v-model="password" type="password" style="margin-bottom: 30px"  placeholder="password">
+                <template slot="prepend">password</template>
+            </el-input>
+            <div class="el-input el-input-group el-input-group--prepend" style="margin-bottom: 30px;">
+                <div class="el-input-group__prepend" style="width:66px">country</div>
+                <el-select v-model="country" placeholder="country" style="width:100%" filterable >
+                    <el-option
+                            v-for="item in countries"
+                            :key="item.value"
+                            :label="item.label"
+                            :value="item.value">
+                    </el-option>
+                </el-select>
+            </div>
+            <div align="center">
+                <el-button id="login" v-on:click="check" :loading="loading" style="width:50%" type="primary">submit</el-button>
+            </div>
+        </div>
+    </div>
+</div>   
+</body>  
+  
+<script type="text/javascript">  
+    new Vue({  
+        el : '#app',  
+        data : {  
+            name : '',  
+            password : '',
+            width : '',
+            country: '',
+            source: '',
+            loading: false,
+            countries: countryData.data,
+            sources : '',
+            publicKey : "MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQC7BPEQlpg2R558HH6gl0SK5Pl7\n" +
+            "u7g/9APkFZsf3bYwYSq2YWTPFFLXYL8uGsUtx34SqvONg6N1Z0cRbS5AsPm9u/vb\n" +
+            "eO8VMkZhPBEutrdOaB8HKLPsKBjw1yOgQOl2gPPwRQifKtqntN9xdnXwBsm7LKoj\n" +
+            "AxZy9mcDEpd3nlcNywIDAQAB"
+
+        },  
+        methods : {
+            check : function(event){  
+                //获取值  
+                var name = this.name;  
+                var password = this.password;
+                var crypt = new JSEncrypt();
+                crypt.setPublicKey(this.publicKey);
+                //password = Base64.encode(crypt.encrypt(password));
+                password = crypt.encrypt(password);
+                //console.log(crypt.decrypt(password));
+                if(name == '' || password == '' /*|| this.source == ''*/ || this.country == ''){
+                    this.$message({  
+                        message : 'parameter is null!',
+                        type : 'error'  
+                    });
+                    return;  
+                }
+                self = this;
+                this.loading = true;
+                $.ajax({  
+                    url : '../meari/login',
+                    type : 'post',
+                    dataType : 'text',
+                    data : {  
+                        name : name,  
+                        password : password  ,
+                        country : this.country
+                    },  
+                    success : function(data) {
+                        self.loading = false;
+                        if(data === undefined || data == ''){
+                            self.$message({
+                                message : 'login error',
+                                type : 'error'
+                            });
+                        }else{
+                            window.location.href=data;
+                        }
+
+                    },  
+                    error : function(data) {
+                        self.loading = false;
+                        console.log(data);
+                    },
+                })  
+            }  
+        }  
+    })
+
+      
+</script>  
+</html>  

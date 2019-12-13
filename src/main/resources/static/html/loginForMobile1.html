@@ -1,0 +1,211 @@
+<!DOCTYPE html>  
+<html>  
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+<title>Insert title here</title>
+
+    <!-- 定制版 ionic 样式 -->
+    <link rel="stylesheet" href="https://unpkg.com/vonic@2.0.0-beta.11/dist/vonic.min.css">
+    <link rel="stylesheet" href="./css/mui.picker.css">
+    <link rel="stylesheet" href="./css/mui.poppicker.css">
+
+    <!-- 依赖库 axios/vue/vue-router -->
+    <script src="https://unpkg.com/axios@0.15.3/dist/axios.min.js"></script>
+    <script src="https://unpkg.com/vue@2.1.10/dist/vue.min.js"></script>
+    <script src="https://unpkg.com/vue-router@2.2.1/dist/vue-router.min.js"></script>
+    <script type="text/javascript" src="./js/jquery.js"></script>
+
+    <!-- vonic 核心文件 -->
+    <script src="https://unpkg.com/vonic@2.0.0-beta.11/dist/vonic.min.js"></script>
+    <script src="./js/mui.min.js"></script>
+    <script src="./js/mui.picker.js"></script>
+    <script src="./js/mui.poppicker.js"></script>
+    <script type="text/javascript" src="./js/jsencrypt.js"></script>
+    <script type="text/javascript" src="./js/country.js"></script>
+
+    <style>
+        .background{
+            background-image:url(./images/background.png);
+            background-repeat:no-repeat;
+            background-attachment:fixed;
+            background-position:top left;
+        }
+        .mui-btn {
+            font-size: 16px;
+            padding: 8px;
+            margin: 3px;
+        }
+    </style>
+</head>
+<body>
+<von-app></von-app>
+<script type="text/x-template" id="von-input">
+    <div class="page" v-nav="{title: 'Login Page'}">
+        <div class="page-content padding-top  background">
+            <!-- type: text, password, email, tel -->
+            <div style="margin-left:10%;margin-right:10%">
+                <div style="position:center;width:100%;height:70px;margin: 10% 0 ;" >
+                    <h1 style="font-family:verdana;text-align:center;font-size: 70px;">meari</h1>
+                </div>
+                <br>
+                <von-input type="text" v-model="username" placeholder="username" label="username"></von-input>
+                <von-input type="password" v-model="password" placeholder="password" label="password" style="margin-bottom: 5px;"></von-input>
+                <von-input type="text" v-model="country" id='showRegionPicker' label="country" @input.native="showRegionSheet()"></von-input>
+                <md-button id='commitButton' class="button button-positive button-block" style="margin-top:10%"  @click.native="login()">submit</md-button>
+            </div>
+        </div>
+    </div>
+</script>
+</body>
+
+<script>
+
+
+    var Index = {
+        template: '#von-input',
+        data() {
+            return {
+                username: '',
+                password: '',
+                language: this.getLanguage(),
+                sourcePicker: '',
+                regionPicker: '',
+                loading: false,
+                country: '',
+                selectFlag: false,
+                publicKey : "MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQC7BPEQlpg2R558HH6gl0SK5Pl7\n" +
+                "u7g/9APkFZsf3bYwYSq2YWTPFFLXYL8uGsUtx34SqvONg6N1Z0cRbS5AsPm9u/vb\n" +
+                "eO8VMkZhPBEutrdOaB8HKLPsKBjw1yOgQOl2gPPwRQifKtqntN9xdnXwBsm7LKoj\n" +
+                "AxZy9mcDEpd3nlcNywIDAQAB"
+
+            }
+        },
+        created: function () {
+            var showRegionSheetFunction = this.showRegionSheet;
+            var setRegionFunction = this.setCountry;
+            mui.init();
+            mui.ready(function() {
+                regionPicker = new mui.PopPicker();
+                regionPicker.country = '';
+
+                var showRegionPicker = document.getElementById('showRegionPicker');
+                showRegionPicker.addEventListener('tap', function(event) {
+                    showRegionSheetFunction();
+                    regionPicker.show(function(items) {
+                        regionPicker.country = items[0].value;
+                        setRegionFunction(items[0].label);
+                    });
+
+                }, false);
+
+            });
+        },
+        methods: {
+            setCountry(country){
+                this.country = country;
+                this.selectFlag = true;
+            },
+            showRegionSheet(){
+                this.selectFlag = false;
+                var country = this.country;
+                var data = countryData.data;
+                if(country && country !== ""){
+                    data = countryData.data.filter(function(item){
+                        if(item.label.indexOf(country) !== -1){
+                            return true;
+                        }else{
+                            return false;
+                        }
+                    })
+                }
+                regionPicker.setData(data);
+            },
+            getLanguage(){
+                var type = navigator.appName;
+                if (type == "Netscape"){
+                    var lang = navigator.language;//获取浏览器配置语言，支持非IE浏览器
+                }else{
+                    var lang = navigator.userLanguage;//获取浏览器配置语言，支持IE5+ == navigator.systemLanguage
+                }
+                var lang = lang.substr(0, 2);
+                return lang;
+            },
+            login(){
+                if(this.loading){
+                    this.pupop('data has been commited');
+                    return;
+                }
+                //获取值
+                var name = this.username;
+                var password = this.password;
+                if(name == '' || password == '' || regionPicker.country=='' ){
+                    this.pupop('parameter is null!');
+                    return;
+                }
+                if( !this.selectFlag){
+                    this.pupop('please select a country from list!');
+                    return;
+                }
+                var crypt = new JSEncrypt();
+                crypt.setPublicKey(this.publicKey);
+                //password = Base64.encode(crypt.encrypt(password));
+                password = crypt.encrypt(password);
+                self = this;
+                document.getElementById('commitButton').classList.remove("button-positive");
+                this.loading=true;
+                $.ajax({
+                    url : '../meari/login',
+                    type : 'post',
+                    dataType : 'text',
+                    data : {
+                        name : name,
+                        password : password,
+                        /*source : sourcePicker.source,*/
+                        country : regionPicker.country
+                    },
+                    success : function(data) {
+                        document.getElementById('commitButton').classList.add("button-positive");
+                        self.loading=false;
+                        if(data === undefined || data == ''){
+                            self.pupop('login error');
+                        }else{
+                            window.location.href=data;
+                        }
+
+                    },
+                    error : function(data) {
+                        self.loading=false;
+                        document.getElementById('commitButton').classList.add("button-positive");
+                        console.log(data);
+                    },
+                })
+            },
+            pupop(content){
+                var options = {
+                    effect: 'scale',
+                    title: '',
+                    buttons: [
+                        {text: 'confirm'},
+                        {text: 'cancel'},
+                    ]
+                };
+
+                var popup = $popup.fromTemplate('<p style="margin-bottom: 0; text-align: center;">'+content+'</p>', options);
+                popup.show();
+
+            }
+        }
+    };
+
+    var routes = [
+        { path: '/', component: Index }
+    ];
+    Vue.use(Vonic.app, {
+        routes: routes
+    })
+
+</script>
+</html>
